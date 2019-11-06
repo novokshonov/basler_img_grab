@@ -14,11 +14,15 @@ def cam_con():
     print('    Exposure time = ', cam.ExposureTimeAbs.GetValue(), ' us')
     print('    Gain = ', cam.GainRaw.GetValue())
     print('    Temperature = ', cam.TemperatureAbs.GetValue(), ' degrees')
+    cam.PixelFormat.SetValue('Mono12')
+    print('    Pixel Format is ', cam.PixelFormat.GetValue())
     cam.ExposureAuto.SetValue('Off')
     cam.GainAuto.SetValue('Off')
     print('    Camera Gain and Exp. Time "AUTO" mode is OFF\n')
 
     return(cam)
+
+    
     
 def pict_aq(camera):
     print('Picture acquisition...')
@@ -26,7 +30,7 @@ def pict_aq(camera):
 
     camera.StartGrabbingMax(1)
     while camera.IsGrabbing():
-        grabResult = camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+        grabResult = camera.RetrieveResult(10000, pylon.TimeoutHandling_ThrowException)
         time.sleep(0.1)
         if grabResult.GrabSucceeded():
             img = grabResult.Array
@@ -45,5 +49,9 @@ def exp_time(camera, num):
 def gain(camera, num):
     camera.GainRaw.SetValue(round(num))
     print('Camera gain is set to ', camera.GainRaw.GetValue())
+
+def pixel_format(camera, pix_form):
+    camera.PixelFormat.SetValue(pix_form)
+    print('Pixel Format is set to ', camera.PixelFormat.GetValue())
 
     
