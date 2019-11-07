@@ -13,7 +13,7 @@ import sys
 # Limited list for Sigma_x, Sigma_y and total intensity
 class lim_list(object):
 
-    def __init__(self, max_sz=300):
+    def __init__(self, max_sz=25):
         self.lst = []
         self.max_sz = max_sz
 
@@ -39,16 +39,17 @@ class lim_list(object):
 
 ##### The two classes below define additional window where total intesity numbers would be plot#################
         
-class tot_int_window(QWidget):
+class time_plots_window(QWidget):
 
     def __init__(self):
         super().__init__()
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('Total Intensity on Time')
+        self.setWindowTitle('Time Plots')
+        self.move(0,0)
 
-        self.figure = TotIntPlotCanvas(self)
+        self.figure = TimePlotsCanvas(self)
 
         self.grid = QGridLayout()
         self.grid.addWidget(self.figure,   0,0,1,1)
@@ -57,11 +58,11 @@ class tot_int_window(QWidget):
         
         self.show()
 
-class TotIntPlotCanvas(FigureCanvas):
+class TimePlotsCanvas(FigureCanvas):
 
     def __init__(self, parent=None):
 
-        fig = Figure(figsize=(5, 4), dpi=100)
+        fig = Figure(figsize=(5, 7), dpi=100)
 
         FigureCanvas.__init__(self, fig)
         self.setParent(parent)
@@ -73,98 +74,48 @@ class TotIntPlotCanvas(FigureCanvas):
 
         #rcParams.update({'figure.autolayout':True})
         
-        self.axes1 = fig.add_subplot(111)
+        self.axes1 = fig.add_subplot(311)
         self.axes1.set_title('Picture total intensity')
         self.axes1.set_xlabel('Measurement #')
+        self.axes1.set_ylabel('[arb. units]')
+        self.axes2 = fig.add_subplot(312)
+        self.axes2.set_title('Sigma X')
+        self.axes2.set_ylabel('[u]')
+        self.axes2.set_xlabel('Measurement #')
+        self.axes3 = fig.add_subplot(313)
+        self.axes3.set_title('Sigma Y')
+        self.axes3.set_ylabel('[u]')
+        self.axes3.set_xlabel('Measurement #')
 
         fig.tight_layout() # For spacing between the subplots
 
     
-    def plot(self, tot_int):
+    def tot_int_plot(self, tot_int):
 
         self.axes1.clear()
-        self.axes1.plot(tot_int)
+        self.axes1.plot(tot_int, '-o')
         self.axes1.set_title('Picture total intensity')
+        self.axes1.set_ylabel('[arb. units]')
         self.axes1.set_xlabel('Measurement #')
         self.axes1.grid(True)
         
         self.draw()
 
-#############################################################################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-##### The two classes below define additional window where total intesity numbers would be plot#################
-        
-class sigmas_window(QWidget):
-
-    def __init__(self):
-        super().__init__()
-        self.initUI()
-
-    def initUI(self):
-        self.setWindowTitle('Sigmas on Time')
-
-        self.figure = SigmasPlotCanvas(self)
-
-        self.grid = QGridLayout()
-        self.grid.addWidget(self.figure,   0,0,1,1)
-
-        self.setLayout(self.grid)
-        
-        self.show()
-
-class SigmasPlotCanvas(FigureCanvas):
-
-    def __init__(self, parent=None):
-
-        fig = Figure(figsize=(8, 4), dpi=100)
-
-        FigureCanvas.__init__(self, fig)
-        self.setParent(parent)
-
-        FigureCanvas.setSizePolicy(self,
-                QSizePolicy.Expanding,
-                QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
-
-        #rcParams.update({'figure.autolayout':True})
-        
-        self.axes1 = fig.add_subplot(121)
-        self.axes1.set_title('Sigma_X')
-        self.axes1.set_xlabel('Measurement #')
-
-        self.axes2 = fig.add_subplot(122)
-        self.axes2.set_title('Sigma_Y')
-        self.axes2.set_xlabel('Measurement #')
-
-
-        fig.tight_layout() # For spacing between the subplots
-
-    
-    def plot(self, sigma_x, sigma_y):
-
-        self.axes1.clear()
-        self.axes1.plot(sigma_x)
-        self.axes1.set_title('Sigma_x')
-        self.axes1.set_xlabel('Measurement #')
-        self.axes1.grid(True)
+    def sigmas_plot(self, sigma_x, sigma_y):
 
         self.axes2.clear()
-        self.axes2.plot(sigma_y)
-        self.axes2.set_title('Sigma_y')
+        self.axes2.plot(sigma_x, '-o')
+        self.axes2.set_title('Sigma X')
+        self.axes2.set_ylabel('[u]')
         self.axes2.set_xlabel('Measurement #')
         self.axes2.grid(True)
+
+        self.axes3.clear()
+        self.axes3.plot(sigma_y, '-o')
+        self.axes3.set_title('Sigma Y')
+        self.axes3.set_ylabel('[u]')
+        self.axes3.set_xlabel('Measurement #')
+        self.axes3.grid(True)
         
         self.draw()
 
@@ -182,8 +133,3 @@ class SigmasPlotCanvas(FigureCanvas):
 
 
 
-
-
-
-
-    

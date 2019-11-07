@@ -54,6 +54,11 @@ class main_window(QMainWindow):
     def __init__(self, parent=None):
         super(main_window, self).__init__(parent)
         self.main_widget = main_widget(self)
+        self.setWindowTitle('Pictures Aquisition')
+        self.setWindowIcon(QtGui.QIcon('icon.png'))
+        self.resize(1200,700)
+        centerPoint = QDesktopWidget().availableGeometry().center()
+        self.move(centerPoint-QPoint(1200/2,700/2))
         self.setCentralWidget(self.main_widget)
         self.show()
 
@@ -64,6 +69,7 @@ class main_widget(QWidget):
     pict = None             # collected picture
     bg_pict = None          # BG picture
     folder_to_save = None   # Folder to save the data
+    replot_flag = False     # The flag is needed when no new measurement done but just replot initiated. In this case no new numbers will will recorded (like sigmas for instance). See img_replot function
 
     hor_fit_par = [0., 3000., 1000., 30] # The parameters will be used for fitting initial guesses
     vrt_fit_par = [0., 3000., 820., 20]
@@ -82,9 +88,6 @@ class main_widget(QWidget):
         self.initUI()
 
     def initUI(self):
-        
-        self.resize(1200,700)
-        self.setWindowTitle('Pictures Aquisition')
 
         # Main plot
         self.figure = PlotCanvas(self, width=10, height=4.4, dpi=100)
@@ -189,6 +192,11 @@ class main_widget(QWidget):
         self.NPictSaveLnEd.editingFinished.connect(self.n_pict_to_save)
         self.NPictSaveLnEd.setToolTip('from 1 to 1000')
 
+        # Format of the pictures
+        self.PictureFormatComBox = QComboBox()
+        self.PictureFormatComBox.addItems(['.tif', '.png'])
+        self.formats = {'.tif' : 'TIFF', \
+                        '.png' : 'PNG'}
 
 
 
@@ -224,6 +232,9 @@ class main_widget(QWidget):
         # Show max position or not
         self.MaxPosChBox = QCheckBox('Show max pos.?')
         self.MaxPosChBox.stateChanged.connect(self.img_replot)
+
+        # Paramter for pixel to um convertion
+        self.ConvertLnEd = QLineEdit('1', alignment=Qt.AlignCenter)
 
 
 
@@ -315,6 +326,8 @@ class main_widget(QWidget):
         self.GridGroupFitPar.addWidget(self.VrtFitParLbl,           5,0,1,2)
         self.GridGroupFitPar.addWidget(self.VrtFitParLnEd,          6,0,1,2)
         self.GridGroupFitPar.addWidget(self.MaxPosChBox,            7,0,1,1)
+        self.GridGroupFitPar.addWidget(QLabel('Pix. to um factor'), 8,0,1,1)
+        self.GridGroupFitPar.addWidget(self.ConvertLnEd,            8,1,1,1)
         self.GroupFitPar.setLayout(self.GridGroupFitPar)
 
         # Group for Save Options
@@ -324,6 +337,8 @@ class main_widget(QWidget):
         self.vboxGroupSave.addWidget(self.FolderLnEd)
         self.vboxGroupSave.addWidget(QLabel('Number of pictures to save'))
         self.vboxGroupSave.addWidget(self.NPictSaveLnEd)
+        self.vboxGroupSave.addWidget(QLabel('Picture format'))
+        self.vboxGroupSave.addWidget(self.PictureFormatComBox)
         self.vboxGroupSave.addStretch(1)
         self.GroupSave.setLayout(self.vboxGroupSave)
 
@@ -455,38 +470,45 @@ class main_widget(QWidget):
             if self.FolderChBox.isChecked() == True:
                 self.folder_to_save = self.FolderLnEd.text()
                 img = Image.fromarray(self.pict)
-                if self.folder_to_save == None:
-                    path = datetime.datetime.now().strftime('%d_%B_%Y__%H_%M_%S') + '.png'
-                    img.save(path)
-                else:
-                    filename = datetime.datetime.now().strftime('%d_%B_%Y__%H_%M_%S') + '.png'
-                    path = os.getcwd() + '\\' + self.folder_to_save
-                    if not os.path.isdir(path):
-                        os.mkdir(path)
-                    img.save(path + '\\' + filename)
+                path = os.getcwd() + '\\' + self.FolderLnEd.text()
+                
+                if os.path.exists(path) == False:
+                    os.mkdir(path)
+                img.save(path + '\\' + datetime.datetime.now().strftime('%d_%B_%Y__%H_%M_%S') + self.PictureFormatComBox.currentText(), format=self.formats[self.PictureFormatComBox.currentText()])
+        
 
 
     def save_header(self):
-        self.folder_to_save = self.FolderLnEd.text()
-        if self.folder_to_save == None:
-            path = datetime.datetime.now().strftime('%d_%B_%Y__%H_%M_%S') + '_header.txt'
-        else:
-            filename = datetime.datetime.now().strftime('%d_%B_%Y__%H_%M_%S') + '_header.txt'
-            path = os.getcwd() + '\\' + self.folder_to_save
-            if not os.path.isdir(path):
+        if self.FolderChBox.isChecked() == True:
+            self.folder_to_save = self.FolderLnEd.text()
+            filename_header = datetime.datetime.now().strftime('%d_%B_%Y__%H_%M_%S') + '_header.txt'
+            filename_BG = datetime.datetime.now().strftime('%d_%B_%Y__%H_%M_%S') + '_BG' + self.PictureFormatComBox.currentText()
+            path = os.getcwd() + '\\' + self.FolderLnEd.text()
+                
+            if os.path.exists(path) == False:
                 os.mkdir(path)
-            path = path + '\\' + filename
-        file = open(path, 'w')
-        file.write('Device - ' + self.camera.GetDeviceInfo().GetModelName() + '\n')
-        file.write('Exp time - ' + str(self.camera.ExposureTimeAbs.GetValue()) + '\n')
-        file.write('Gain - ' + str(self.camera.GainRaw.GetValue()) + '\n')
-        file.write('Temperature - ' + str(self.camera.TemperatureAbs.GetValue()) + '\n')
-        if self.BgSubtrChBox.isChecked():
-            file.write('BG IS subtracted\n')
-        else:
-            file.write('BG IS NOT subtracted\n')
-        file.close()
-        time.sleep(0.5)
+
+            path_header = path + '\\' + filename_header
+            path_BG = path + '\\' + filename_BG
+
+            if self.bg_pict is not None:
+                if float(self.GainLnEd.text()) != 0:
+                    img_bg = Image.fromarray(self.bg_pict * float(self.GainLnEd.text()) * float(self.ExpTimeLnEd.text()))
+                else:
+                    img_bg = Image.fromarray(self.bg_pict * float(self.ExpTimeLnEd.text()))
+                img_bg.save(path_BG, format=self.formats[self.PictureFormatComBox.currentText()])
+                    
+            file = open(path_header, 'w')
+            file.write('Device - ' + self.camera.GetDeviceInfo().GetModelName() + '\n')
+            file.write('Exp time - ' + str(self.camera.ExposureTimeAbs.GetValue()) + '\n')
+            file.write('Gain - ' + str(self.camera.GainRaw.GetValue()) + '\n')
+            file.write('Temperature - ' + str(self.camera.TemperatureAbs.GetValue()) + '\n')
+            if self.BgSubtrChBox.isChecked():
+                file.write('BG IS subtracted\n')
+            else:
+                file.write('BG IS NOT subtracted\n')
+            file.close()
+            time.sleep(0.5)
         
 
     
@@ -497,7 +519,9 @@ class main_widget(QWidget):
         for i in range(9):
             self.bg_pict = self.bg_pict + cam_func.pict_aq(self.camera)
             time.sleep(0.1)
-        self.bg_pict = self.bg_pict / 10
+        self.bg_pict = self.bg_pict / 10 / float(self.ExpTimeLnEd.text())
+        if float(self.GainLnEd.text()) != 0:
+            self.bg_pict = self.bg_pict / float(self.GainLnEd.text())
         self.MainMsgBox.append('   BG picture is acquised.\n')
         print('BG picture is acquised! \n')
 
@@ -564,6 +588,7 @@ class main_widget(QWidget):
         if self.folder_to_save == '':
             self.folder_to_save = None
 
+                
 
     # Chnging number of pictures to be saved
     def n_pict_to_save(self):
@@ -606,8 +631,10 @@ class main_widget(QWidget):
 
     # when we change img scale (grey, jet...) it plots the img again
     def img_replot(self):
+        self.replot_flag = True
         if self.pict is not None:
             self.figure.plot(pointer=self)
+        self.replot_flag = False
 
 
 class PlotCanvas(FigureCanvas):
@@ -645,7 +672,10 @@ class PlotCanvas(FigureCanvas):
 
         img = pointer.pict
         if not (np.sum(pointer.bg_pict == None)) and pointer.BgSubtrChBox.isChecked():
-            img = img - pointer.bg_pict
+            if float(pointer.GainLnEd.text()) != 0:
+                img = img - pointer.bg_pict * float(pointer.ExpTimeLnEd.text()) * float(pointer.GainLnEd.text())
+            else:
+                img = img - pointer.bg_pict * float(pointer.ExpTimeLnEd.text())
         
         img_height = np.size(img,0)
         img_width = np.size(img,1)
@@ -688,9 +718,17 @@ class PlotCanvas(FigureCanvas):
             pointer.vrt_fit_par, vrt_cov = curve_fit(gaus, ydata, vrt_proj, pointer.vrt_fit_par)
             pointer.HorFitParLnEd.setText(str(round(pointer.hor_fit_par[0])) + ',' + str(round(pointer.hor_fit_par[1])) + ',' + str(round(pointer.hor_fit_par[2])) + ',' + str(round(pointer.hor_fit_par[3])))
             pointer.VrtFitParLnEd.setText(str(round(pointer.vrt_fit_par[0])) + ',' + str(round(pointer.vrt_fit_par[1])) + ',' + str(round(pointer.vrt_fit_par[2])) + ',' + str(round(pointer.vrt_fit_par[3])))
-            pointer.sigma_x.add(pointer.hor_fit_par[3])
-            pointer.sigma_y.add(pointer.vrt_fit_par[3])
+            if pointer.replot_flag == False:
+                pointer.sigma_x.add(pointer.hor_fit_par[3])
+                pointer.sigma_y.add(pointer.vrt_fit_par[3])
+            else:
+                pointer.sigma_x.lst[-1] = pointer.hor_fit_par[3]
+                pointer.sigma_y.lst[-1] = pointer.vrt_fit_par[3]
             print('    DONE')
+        else:
+            if pointer.replot_flag == False:
+                pointer.sigma_x.add(0)
+                pointer.sigma_y.add(0)
 
         
         self.axes1.clear()
@@ -717,7 +755,8 @@ class PlotCanvas(FigureCanvas):
         self.axes2.set_title('X proj.')
         self.axes2.set_xlabel('X, [pixels]')
         if pointer.FitChBox.isChecked():
-            pointer.MainMsgBox.append('   Sigma_x = ' + str(round(pointer.sigma_x.last_el(),3)))
+            if pointer.replot_flag == False:
+                pointer.MainMsgBox.append('   Sigma_x = ' + str(round(pointer.sigma_x.last_el(),3)))
         
         self.axes3.clear()
         self.axes3.plot(ydata, vrt_proj)
@@ -732,33 +771,28 @@ class PlotCanvas(FigureCanvas):
         self.axes3.set_title('Y proj.')
         self.axes3.set_xlabel('Y, [pixels]')
         if pointer.FitChBox.isChecked():
-            pointer.MainMsgBox.append('   Sigma_y = ' + str(round(pointer.sigma_y.last_el(),3)) + '\n')
+            if pointer.replot_flag == False:
+                pointer.MainMsgBox.append('   Sigma_y = ' + str(round(pointer.sigma_y.last_el(),3)) + '\n')
         
         self.draw()
 
         # Here we plot total intensity on time in additional window
-        if pointer.TotIntPlotChBox.isChecked() and pointer.pict is not None:
+        if (pointer.TotIntPlotChBox.isChecked() and pointer.pict is not None) or (pointer.SigmasPlotChBox.isChecked() and pointer.pict is not None):
             try:
-                pointer.tot_int_plot # Here We check if it exists
-                if pointer.tot_int_plot.isVisible() == False: # Here we check if its visible and revoke if not
-                    pointer.tot_int_plot.show()
-                pointer.tot_int_plot.figure.plot(pointer.tot_int.lst)
+                pointer.time_plots # Here We check if it exists
+                if pointer.time_plots.isVisible() == False: # Here we check if its visible and revoke if not
+                    pointer.time_plots.show()
+                if pointer.TotIntPlotChBox.isChecked():
+                    pointer.time_plots.figure.tot_int_plot(pointer.tot_int.lst)
+                if pointer.SigmasPlotChBox.isChecked():
+                    pointer.time_plots.figure.sigmas_plot(np.array(pointer.sigma_x.lst) * float(pointer.ConvertLnEd.text()), np.array(pointer.sigma_y.lst) * float(pointer.ConvertLnEd.text()))
 
             except:
-                pointer.tot_int_plot = misc.tot_int_window()
-                pointer.tot_int_plot.figure.plot(pointer.tot_int.lst)
-
-        # Here we plot sigmas on time in additional window
-        if pointer.SigmasPlotChBox.isChecked() and pointer.FitChBox.isChecked() and pointer.pict is not None:
-            try:
-                pointer.sigmas_plot # Here We check if it exists
-                if pointer.sigmas_plot.isVisible() == False: # Here we check if its visible and revoke if not
-                    pointer.sigmas_plot.show()
-                pointer.sigmas_plot.figure.plot(pointer.sigma_x.lst, pointer.sigma_y.lst)
-
-            except:
-                pointer.sigmas_plot = misc.sigmas_window()
-                pointer.sigmas_plot.figure.plot(pointer.sigma_x.lst, pointer.sigma_y.lst)
+                pointer.time_plots = misc.time_plots_window()
+                if pointer.TotIntPlotChBox.isChecked():
+                    pointer.time_plots.figure.tot_int_plot(pointer.tot_int.lst)
+                if pointer.SigmasPlotChBox.isChecked():
+                    pointer.time_plots.figure.sigmas_plot(np.array(pointer.sigma_x.lst) * float(pointer.ConvertLnEd.text()), np.array(pointer.sigma_y.lst) * float(pointer.ConvertLnEd.text()))
 
         
 
