@@ -476,7 +476,7 @@ class main_widget(QWidget):
                     img = Image.fromarray(img)
                     img.save(img_file, format=self.formats[self.PictureFormatComBox.currentText()])
                     self.MainMsgBox.append('   Picture acquised #' + str(i) + ' saved')
-                    print('   Picture acquised #' + str(i) + ' saved')
+                    print('   Picture #' + str(i) + ' saved')
                 except:
                     self.MainMsgBox.append('   Picture #' + str(i) + 'was not saved by some reason.')
                     print('   Picture #' + str(i) + 'was not saved by some reason.')
