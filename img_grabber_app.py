@@ -213,10 +213,6 @@ class main_widget(QWidget):
         self.VrtFitParLnEd.editingFinished.connect(self.img_replot)
         self.VrtFitParLnEd.setToolTip('Anticipated sigma_y')
 
-        # Show max position or not
-        self.MaxPosChBox = QCheckBox('Show max pos.?')
-        self.MaxPosChBox.stateChanged.connect(self.img_replot)
-
         # Paramter for pixel to um convertion
         self.ConvertLnEd = QLineEdit('1', alignment=Qt.AlignCenter)
 
@@ -308,9 +304,8 @@ class main_widget(QWidget):
         self.GridGroupFitPar.addWidget(self.HorFitParLnEd,          4,0,1,2)
         self.GridGroupFitPar.addWidget(self.VrtFitParLbl,           5,0,1,2)
         self.GridGroupFitPar.addWidget(self.VrtFitParLnEd,          6,0,1,2)
-        self.GridGroupFitPar.addWidget(self.MaxPosChBox,            7,0,1,1)
-        self.GridGroupFitPar.addWidget(QLabel('Pix. to um factor'), 8,0,1,1)
-        self.GridGroupFitPar.addWidget(self.ConvertLnEd,            8,1,1,1)
+        self.GridGroupFitPar.addWidget(QLabel('Pix. to um factor'), 7,0,1,1)
+        self.GridGroupFitPar.addWidget(self.ConvertLnEd,            7,1,1,1)
         self.GroupFitPar.setLayout(self.GridGroupFitPar)
 
         # Group for Save Options
@@ -585,7 +580,9 @@ class main_widget(QWidget):
             
         # The next line is fitting. It will check if it's necessary to fit and Cut or Projection
         hor_proj, vrt_proj, xdata, ydata, self.hor_fit_par, self.vrt_fit_par, x_max_pos, y_max_pos, msg = misc_func.gaus_fit(img, self.hor_fit_par[3], self.vrt_fit_par[3], self.CutOrProjComBox.currentText(), int(self.CutWidthLnEd.text()), self.FitChBox.isChecked())
-        self.MainMsgBox.append('\n' + msg)
+        self.MainMsgBox.append('\n' + msg + '\n')
+        self.MainMsgBox.append('    X position of maximum = ' + str(x_max_pos))
+        self.MainMsgBox.append('    Y position of maximum = ' + str(y_max_pos) + '\n')
         self.HorFitParLnEd.setText(str(round(self.hor_fit_par[3]*float(self.ConvertLnEd.text()))))
         self.VrtFitParLnEd.setText(str(round(self.vrt_fit_par[3]*float(self.ConvertLnEd.text()))))
         if self.replot_flag == False:
@@ -599,7 +596,7 @@ class main_widget(QWidget):
         pen1 = pg.mkPen(color=(255, 0, 0), width=4)
         pen2 = pg.mkPen(color=(125, 255, 0), width=2)
         pen3 = pg.mkPen(color=(0, 0, 255), width=2)
-
+        
         
         # PLOTTING PICTURE and CUTS or PROJECTIONS
         self.imageWidget.setImage(img, autoRange=False)
